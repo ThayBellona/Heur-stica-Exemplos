@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heurísticas de Busca em Inteligência Artificial</title>
+    <!-- Importando Tailwind CSS para estilização -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* Slate 900 */
+            color: #f8fafc; /* Slate 50 */
+        }
+        canvas {
+            touch-action: none; /* Evita rolagem da página ao tocar no canvas */
+            background-color: #1e293b; /* Slate 800 */
+            border-radius: 0.5rem;
+            box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+            cursor: crosshair;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col p-4 md:p-8">
+
+    <header class="max-w-6xl mx-auto w-full text-center mb-10 mt-4">
+        <h1 class="text-4xl md:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
+            Heurísticas em Pathfinding
+        </h1>
+        <p class="text-lg text-slate-300 max-w-2xl mx-auto">
+            Interaja com os mapas abaixo! O ponto azul é a origem (A) e o seu mouse/dedo controla o destino (B). 
+            Veja como cada algoritmo "enxerga" a distância e o caminho de forma diferente.
+        </p>
+    </header>
+
+    <main class="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Card 1: Manhattan -->
+        <section class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 transition-all card-hover flex flex-col items-center">
+            <div class="w-full text-left mb-4">
+                <h2 class="text-2xl font-bold text-blue-400 mb-2">🏙️ Distância de Manhattan</h2>
+                <p class="text-sm text-slate-400 h-16">
+                    Movimento em formato de "cruz" (apenas vertical e horizontal). Como andar em quarteirões de uma cidade.
+                </p>
+            </div>
+            <div class="relative">
+                <canvas id="canvas-manhattan" width="300" height="300"></canvas>
+            </div>
+            <div class="mt-4 bg-slate-900 w-full rounded-lg p-3 text-center border border-slate-700">
+                <span class="text-slate-400 text-sm">Fórmula:</span>
+                <code class="block mt-1 text-emerald-400 font-mono font-bold">|Δx| + |Δy|</code>
+                <div class="mt-2 text-xl font-bold text-white">Distância: <span id="dist-manhattan">0</span></div>
+            </div>
+        </section>
+
+        <!-- Card 2: Euclidiana -->
+        <section class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 transition-all card-hover flex flex-col items-center">
+            <div class="w-full text-left mb-4">
+                <h2 class="text-2xl font-bold text-purple-400 mb-2">🦅 Distância Euclidiana</h2>
+                <p class="text-sm text-slate-400 h-16">
+                    Movimento em linha reta (voo de pássaro). Calcula a hipotenusa entre os dois pontos.
+                </p>
+            </div>
+            <div class="relative">
+                <canvas id="canvas-euclidean" width="300" height="300"></canvas>
+            </div>
+            <div class="mt-4 bg-slate-900 w-full rounded-lg p-3 text-center border border-slate-700">
+                <span class="text-slate-400 text-sm">Fórmula:</span>
+                <code class="block mt-1 text-emerald-400 font-mono font-bold">√(Δx² + Δy²)</code>
+                <div class="mt-2 text-xl font-bold text-white">Distância: <span id="dist-euclidean">0.00</span></div>
+            </div>
+        </section>
+
+        <!-- Card 3: Chebyshev -->
+        <section class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 transition-all card-hover flex flex-col items-center">
+            <div class="w-full text-left mb-4">
+                <h2 class="text-2xl font-bold text-amber-400 mb-2">♚ Distância de Chebyshev</h2>
+                <p class="text-sm text-slate-400 h-16">
+                    Movimento em qualquer direção (incluindo diagonais com custo 1). Como o movimento do Rei no Xadrez.
+                </p>
+            </div>
+            <div class="relative">
+                <canvas id="canvas-chebyshev" width="300" height="300"></canvas>
+            </div>
+            <div class="mt-4 bg-slate-900 w-full rounded-lg p-3 text-center border border-slate-700">
+                <span class="text-slate-400 text-sm">Fórmula:</span>
+                <code class="block mt-1 text-emerald-400 font-mono font-bold">max(|Δx|, |Δy|)</code>
+                <div class="mt-2 text-xl font-bold text-white">Distância: <span id="dist-chebyshev">0</span></div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const GRID_SIZE = 10;
+        const CANVAS_SIZE = 300;
+        const CELL_SIZE = CANVAS_SIZE / GRID_SIZE;
+        const START_POS = { x: 2, y: 5 }; // Posição fixa de início
+        let mousePos = { x: 7, y: 2 };    // Posição inicial do alvo para demonstração
+
+        // Função utilitária para pegar a posição do mouse/toque no canvas
+        function getPointerPos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+            const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+            
+            let x = Math.floor((clientX - rect.left) / (rect.width / GRID_SIZE));
+            let y = Math.floor((clientY - rect.top) / (rect.height / GRID_SIZE));
+            
+            // Limitar dentro do grid
+            x = Math.max(0, Math.min(x, GRID_SIZE - 1));
+            y = Math.max(0, Math.min(y, GRID_SIZE - 1));
+            return { x, y };
+        }
+
+        function drawBaseGrid(ctx) {
+            ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+            ctx.strokeStyle = '#334155'; // Slate 700
+            ctx.lineWidth = 1;
+
+            for (let i = 0; i <= GRID_SIZE; i++) {
+                // Linhas verticais
+                ctx.beginPath();
+                ctx.moveTo(i * CELL_SIZE, 0);
+                ctx.lineTo(i * CELL_SIZE, CANVAS_SIZE);
+                ctx.stroke();
+                // Linhas horizontais
+                ctx.beginPath();
+                ctx.moveTo(0, i * CELL_SIZE);
+                ctx.lineTo(CANVAS_SIZE, i * CELL_SIZE);
+                ctx.stroke();
+            }
+        }
+
+        function drawEntities(ctx, pathCells) {
+            // Desenhar células do caminho
+            pathCells.forEach(cell => {
+                if ((cell.x !== START_POS.x || cell.y !== START_POS.y) && 
+                    (cell.x !== mousePos.x || cell.y !== mousePos.y)) {
+                    ctx.fillStyle = 'rgba(52, 211, 153, 0.4)'; // Emerald com transparência
+                    ctx.fillRect(cell.x * CELL_SIZE, cell.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                }
+            });
+
+            // Desenhar Ponto Inicial (Azul)
+            ctx.fillStyle = '#3b82f6'; // Blue 500
+            ctx.fillRect(START_POS.x * CELL_SIZE + 2, START_POS.y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 16px Inter';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('A', START_POS.x * CELL_SIZE + CELL_SIZE/2, START_POS.y * CELL_SIZE + CELL_SIZE/2);
+
+            // Desenhar Ponto Final (Vermelho)
+            ctx.fillStyle = '#ef4444'; // Red 500
+            ctx.fillRect(mousePos.x * CELL_SIZE + 2, mousePos.y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+            ctx.fillStyle = 'white';
+            ctx.fillText('B', mousePos.x * CELL_SIZE + CELL_SIZE/2, mousePos.y * CELL_SIZE + CELL_SIZE/2);
+        }
+
+        function renderManhattan() {
+            const canvas = document.getElementById('canvas-manhattan');
+            const ctx = canvas.getContext('2d');
+            const dx = Math.abs(mousePos.x - START_POS.x);
+            const dy = Math.abs(mousePos.y - START_POS.y);
+            const distance = dx + dy;
+            
+            document.getElementById('dist-manhattan').innerText = distance;
+
+            drawBaseGrid(ctx);
+            
+            // Gerar o caminho visual (Zigue-Zague ou 'L')
+            let path = [];
+            let cx = START_POS.x;
+            let cy = START_POS.y;
+            
+            // Move no eixo X primeiro, depois no eixo Y
+            while(cx !== mousePos.x) {
+                path.push({x: cx, y: cy});
+                cx += Math.sign(mousePos.x - cx);
+            }
+            while(cy !== mousePos.y) {
+                path.push({x: cx, y: cy});
+                cy += Math.sign(mousePos.y - cy);
+            }
+            
+            drawEntities(ctx, path);
+            
+            // Desenhar uma linha pontilhada acompanhando o caminho para ênfase
+            ctx.beginPath();
+            ctx.strokeStyle = '#34d399'; // Emerald 400
+            ctx.lineWidth = 3;
+            ctx.setLineDash([5, 5]);
+            ctx.moveTo(START_POS.x * CELL_SIZE + CELL_SIZE/2, START_POS.y * CELL_SIZE + CELL_SIZE/2);
+            ctx.lineTo(mousePos.x * CELL_SIZE + CELL_SIZE/2, START_POS.y * CELL_SIZE + CELL_SIZE/2);
+            ctx.lineTo(mousePos.x * CELL_SIZE + CELL_SIZE/2, mousePos.y * CELL_SIZE + CELL_SIZE/2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function renderEuclidean() {
+            const canvas = document.getElementById('canvas-euclidean');
+            const ctx = canvas.getContext('2d');
+            const dx = mousePos.x - START_POS.x;
+            const dy = mousePos.y - START_POS.y;
+            const distance = Math.sqrt(dx*dx + dy*dy);
+            
+            document.getElementById('dist-euclidean').innerText = distance.toFixed(2);
+
+            drawBaseGrid(ctx);
+            drawEntities(ctx, []); // Nenhum grid path para euclidiana (voo livre)
+
+            // Desenhar a linha reta
+            ctx.beginPath();
+            ctx.strokeStyle = '#c084fc'; // Purple 400
+            ctx.lineWidth = 4;
+            ctx.moveTo(START_POS.x * CELL_SIZE + CELL_SIZE/2, START_POS.y * CELL_SIZE + CELL_SIZE/2);
+            ctx.lineTo(mousePos.x * CELL_SIZE + CELL_SIZE/2, mousePos.y * CELL_SIZE + CELL_SIZE/2);
+            ctx.stroke();
+        }
+
+        function renderChebyshev() {
+            const canvas = document.getElementById('canvas-chebyshev');
+            const ctx = canvas.getContext('2d');
+            const dx = Math.abs(mousePos.x - START_POS.x);
+            const dy = Math.abs(mousePos.y - START_POS.y);
+            const distance = Math.max(dx, dy);
+            
+            document.getElementById('dist-chebyshev').innerText = distance;
+
+            drawBaseGrid(ctx);
+
+            // Gerar o caminho visual (Diagonal primeiro, depois reta)
+            let path = [];
+            let cx = START_POS.x;
+            let cy = START_POS.y;
+            
+            while(cx !== mousePos.x || cy !== mousePos.y) {
+                path.push({x: cx, y: cy});
+                if (cx !== mousePos.x) cx += Math.sign(mousePos.x - cx);
+                if (cy !== mousePos.y) cy += Math.sign(mousePos.y - cy);
+            }
+            
+            drawEntities(ctx, path);
+
+            // Desenhar uma linha contínua acompanhando as diagonais
+            ctx.beginPath();
+            ctx.strokeStyle = '#fbbf24'; // Amber 400
+            ctx.lineWidth = 3;
+            
+            let lx = START_POS.x;
+            let ly = START_POS.y;
+            ctx.moveTo(lx * CELL_SIZE + CELL_SIZE/2, ly * CELL_SIZE + CELL_SIZE/2);
+            
+            while(lx !== mousePos.x || ly !== mousePos.y) {
+                if (lx !== mousePos.x) lx += Math.sign(mousePos.x - lx);
+                if (ly !== mousePos.y) ly += Math.sign(mousePos.y - ly);
+                ctx.lineTo(lx * CELL_SIZE + CELL_SIZE/2, ly * CELL_SIZE + CELL_SIZE/2);
+            }
+            ctx.stroke();
+        }
+
+        function updateAll(evt) {
+            // Usa o primeiro canvas apenas como referência para pegar posição,
+            // mas sincroniza todos para mostrar a mesma distância.
+            if(evt) {
+                const targetCanvas = evt.target;
+                const newPos = getPointerPos(targetCanvas, evt);
+                if(newPos.x !== mousePos.x || newPos.y !== mousePos.y) {
+                    mousePos = newPos;
+                }
+            }
+            
+            renderManhattan();
+            renderEuclidean();
+            renderChebyshev();
+        }
+
+        const canvases = ['canvas-manhattan', 'canvas-euclidean', 'canvas-chebyshev'];
+        canvases.forEach(id => {
+            const cvs = document.getElementById(id);
+            cvs.addEventListener('mousemove', updateAll);
+            cvs.addEventListener('touchmove', (e) => {
+                e.preventDefault(); // Impede rolagem ao arrastar no canvas
+                updateAll(e);
+            });
+            cvs.addEventListener('mousedown', updateAll);
+            cvs.addEventListener('touchstart', updateAll);
+        });
+
+        // Render inicial
+        updateAll();
+
+    </script>
+</body>
+</html>
