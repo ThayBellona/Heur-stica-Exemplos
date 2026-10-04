@@ -1,301 +1,913 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Heurísticas de Busca em Inteligência Artificial</title>
-    <!-- Importando Tailwind CSS para estilização -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0f172a; /* Slate 900 */
-            color: #f8fafc; /* Slate 50 */
-        }
-        canvas {
-            touch-action: none; /* Evita rolagem da página ao tocar no canvas */
-            background-color: #1e293b; /* Slate 800 */
-            border-radius: 0.5rem;
-            box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
-            cursor: crosshair;
-        }
-        .card-hover:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
-        }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Heurísticas em Pathfinding</title>
+<style>
+:root{
+  --bg:#0f172a;
+  --panel:#1e293b;
+  --panel2:#172033;
+  --line:#334155;
+  --text:#f8fafc;
+  --muted:#94a3b8;
+  --blue:#60a5fa;
+  --green:#34d399;
+  --purple:#c084fc;
+  --amber:#fbbf24;
+  --red:#ef4444;
+  --orange:#fb923c;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;
+  background:
+    radial-gradient(circle at 15% 0%,rgba(59,130,246,.14),transparent 35%),
+    var(--bg);
+  color:var(--text);
+}
+.wrap{max-width:1180px;margin:auto;padding:26px 18px 44px}
+header{text-align:center;margin-bottom:16px}
+header h1{
+  margin:0 0 10px;
+  font-size:clamp(34px,5vw,54px);
+  background:linear-gradient(90deg,var(--blue),var(--green));
+  -webkit-background-clip:text;
+  color:transparent;
+}
+header p{margin:auto;max-width:820px;color:#cbd5e1;line-height:1.55}
+.tabs{display:flex;justify-content:center;gap:8px;margin:18px 0}
+.tab-btn{
+  border:1px solid var(--line);
+  background:#111827;
+  color:var(--muted);
+  padding:10px 15px;
+  border-radius:12px;
+  font-weight:800;
+  cursor:pointer;
+}
+.tab-btn.active{background:#1d4f7a;color:white;border-color:#39678f}
+.tab{display:none}
+.tab.active{display:block}
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+  padding:12px 14px;
+  background:#111827;
+  border:1px solid var(--line);
+  border-radius:14px;
+}
+.controls{display:flex;gap:8px;flex-wrap:wrap}
+button.action{
+  border:0;
+  border-radius:10px;
+  padding:9px 13px;
+  font-weight:800;
+  cursor:pointer;
+  background:var(--blue);
+  color:#07111f;
+}
+button.secondary{
+  background:#223047;
+  color:#e2e8f0;
+  border:1px solid #3a4b65;
+}
+.state{color:var(--muted);font-size:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{
+  background:rgba(30,41,59,.78);
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:16px;
+  box-shadow:0 12px 30px rgba(0,0,0,.18);
+}
+.card h2{margin:0 0 5px;font-size:20px}
+.card p{margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.45;min-height:38px}
+canvas.heur{
+  width:100%;
+  aspect-ratio:1/1;
+  background:#111827;
+  border:1px solid var(--line);
+  border-radius:12px;
+  display:block;
+  cursor:crosshair;
+}
+.formula{
+  margin-top:11px;
+  font:800 14px ui-monospace,Consolas,monospace;
+}
+.man{color:var(--green)}
+.euc{color:var(--purple)}
+.cheb{color:var(--amber)}
+.card-mode{
+  margin-top:10px;
+  width:100%;
+  border:1px solid var(--line);
+  background:#111827;
+  color:#cbd5e1;
+  border-radius:9px;
+  padding:8px 10px;
+  font-weight:750;
+  cursor:pointer;
+}
+.card-mode.active{background:#24334d;color:#fff;border-color:#4a6383}
+.pickbox{
+  margin-top:10px;
+  border-top:1px solid var(--line);
+  padding-top:10px;
+  font-size:12px;
+  color:var(--muted);
+  min-height:62px;
+  line-height:1.5;
+}
+.pickbox strong{color:#fff}
+.legend{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-top:13px;
+  color:var(--muted);
+  font-size:12px;
+  justify-content:center;
+}
+.legend span{display:flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+.note{
+  margin-top:13px;
+  background:#111827;
+  border:1px solid var(--line);
+  border-radius:13px;
+  padding:12px 14px;
+  color:#cbd5e1;
+  font-size:13px;
+  line-height:1.5;
+}
+.sim-head{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-bottom:13px;
+}
+.sim-head h2{margin:0;font-size:26px}
+.sim-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.sim-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.sim-card{
+  background:rgba(30,41,59,.78);
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:14px;
+}
+.sim-card header{
+  margin:0 0 10px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  text-align:left;
+}
+.sim-card h3{margin:0;font-size:18px}
+.stats{font-size:12px;color:var(--muted)}
+.maze{
+  display:grid;
+  grid-template-columns:repeat(20,1fr);
+  gap:1px;
+  background:#334155;
+  padding:1px;
+  border-radius:9px;
+  overflow:hidden;
+}
+.cell{aspect-ratio:1;background:#111827}
+.wall{background:#e5e7eb}
+.start{background:#38bdf8}
+.goal{background:#ef4444}
+.visited{background:#315b9d}
+.frontier{background:#facc15}
+.current{background:#fb923c}
+.path{background:#34d399}
+@media(max-width:900px){
+  .grid3,.sim-grid{grid-template-columns:1fr}
+}
+</style>
 </head>
-<body class="min-h-screen flex flex-col p-4 md:p-8">
 
-    <header class="max-w-6xl mx-auto w-full text-center mb-10 mt-4">
-        <h1 class="text-4xl md:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
-            Heurísticas em Pathfinding
-        </h1>
-        <p class="text-lg text-slate-300 max-w-2xl mx-auto">
-            Interaja com os mapas abaixo! O ponto azul é a origem (A) e o seu mouse/dedo controla o destino (B). 
-            Veja como cada algoritmo "enxerga" a distância e o caminho de forma diferente.
-        </p>
-    </header>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Heurísticas em Pathfinding</h1>
+  </header>
 
-    <main class="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        <!-- Card 1: Manhattan -->
-        <section class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 transition-all card-hover flex flex-col items-center">
-            <div class="w-full text-left mb-4">
-                <h2 class="text-2xl font-bold text-blue-400 mb-2">🏙️ Distância de Manhattan</h2>
-                <p class="text-sm text-slate-400 h-16">
-                    Movimento em formato de "cruz" (apenas vertical e horizontal). Como andar em quarteirões de uma cidade.
-                </p>
-            </div>
-            <div class="relative">
-                <canvas id="canvas-manhattan" width="300" height="300"></canvas>
-            </div>
-            <div class="mt-4 bg-slate-900 w-full rounded-lg p-3 text-center border border-slate-700">
-                <span class="text-slate-400 text-sm">Fórmula:</span>
-                <code class="block mt-1 text-emerald-400 font-mono font-bold">|Δx| + |Δy|</code>
-                <div class="mt-2 text-xl font-bold text-white">Distância: <span id="dist-manhattan">0</span></div>
-            </div>
-        </section>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="heuristicas">Heurísticas</button>
+    <button class="tab-btn" data-tab="simulacoes">Simulações</button>
+  </div>
 
-        <!-- Card 2: Euclidiana -->
-        <section class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 transition-all card-hover flex flex-col items-center">
-            <div class="w-full text-left mb-4">
-                <h2 class="text-2xl font-bold text-purple-400 mb-2">🦅 Distância Euclidiana</h2>
-                <p class="text-sm text-slate-400 h-16">
-                    Movimento em linha reta (voo de pássaro). Calcula a hipotenusa entre os dois pontos.
-                </p>
-            </div>
-            <div class="relative">
-                <canvas id="canvas-euclidean" width="300" height="300"></canvas>
-            </div>
-            <div class="mt-4 bg-slate-900 w-full rounded-lg p-3 text-center border border-slate-700">
-                <span class="text-slate-400 text-sm">Fórmula:</span>
-                <code class="block mt-1 text-emerald-400 font-mono font-bold">√(Δx² + Δy²)</code>
-                <div class="mt-2 text-xl font-bold text-white">Distância: <span id="dist-euclidean">0.00</span></div>
-            </div>
-        </section>
+  <section id="heuristicas" class="tab active">
+    <div class="topbar">
+      <div class="controls">
+        <button class="action" id="lockBtn">🔒 Travar objetivo</button>
+        <button class="action secondary" id="resetBtn">↻ Reiniciar</button>
+      </div>
+      <div class="state">
+        Manhattan — objetivo B: <strong id="goalLabel">(7, 2)</strong> ·
+        <span id="modeLabel">mova o mouse no quadro de Manhattan para posicionar B</span>
+      </div>
+    </div>
 
-        <!-- Card 3: Chebyshev -->
-        <section class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 transition-all card-hover flex flex-col items-center">
-            <div class="w-full text-left mb-4">
-                <h2 class="text-2xl font-bold text-amber-400 mb-2">♚ Distância de Chebyshev</h2>
-                <p class="text-sm text-slate-400 h-16">
-                    Movimento em qualquer direção (incluindo diagonais com custo 1). Como o movimento do Rei no Xadrez.
-                </p>
-            </div>
-            <div class="relative">
-                <canvas id="canvas-chebyshev" width="300" height="300"></canvas>
-            </div>
-            <div class="mt-4 bg-slate-900 w-full rounded-lg p-3 text-center border border-slate-700">
-                <span class="text-slate-400 text-sm">Fórmula:</span>
-                <code class="block mt-1 text-emerald-400 font-mono font-bold">max(|Δx|, |Δy|)</code>
-                <div class="mt-2 text-xl font-bold text-white">Distância: <span id="dist-chebyshev">0</span></div>
-            </div>
-        </section>
+    <div class="grid3">
+      <article class="card">
+        <h2>🏙️ Distância de Manhattan</h2>
+        <p>Movimento horizontal e vertical. É a heurística usada no seu labirinto em Python.</p>
+        <canvas id="manCanvas" class="heur" width="300" height="300"></canvas>
+        <div class="formula man">h = |Δx| + |Δy| → <span id="manValue">0</span></div>
+        <div class="pickbox" id="manPick">Trave o objetivo para comparar os vizinhos.</div>
+      </article>
 
-    </main>
+      <article class="card">
+        <h2>🦅 Distância Euclidiana</h2>
+        <p>Distância direta em linha reta entre o ponto inicial e o objetivo.</p>
+        <canvas id="eucCanvas" class="heur" width="300" height="300"></canvas>
+        <div class="formula euc">h = √(Δx² + Δy²) → <span id="eucValue">0</span></div>
+        <button class="card-mode active" id="eucModeBtn">✓ Visual original</button>
+        <div class="pickbox" id="eucPick">A fica fixo e B acompanha o mouse.</div>
+      </article>
 
-    <script>
-        const GRID_SIZE = 10;
-        const CANVAS_SIZE = 300;
-        const CELL_SIZE = CANVAS_SIZE / GRID_SIZE;
-        const START_POS = { x: 2, y: 5 }; // Posição fixa de início
-        let mousePos = { x: 7, y: 2 };    // Posição inicial do alvo para demonstração
+      <article class="card">
+        <h2>♚ Distância de Chebyshev</h2>
+        <p>Útil quando movimentos diagonais também são permitidos com o mesmo custo.</p>
+        <canvas id="chebCanvas" class="heur" width="300" height="300"></canvas>
+        <div class="formula cheb">h = max(|Δx|, |Δy|) → <span id="chebValue">0</span></div>
+        <button class="card-mode active" id="chebModeBtn">✓ Visual original</button>
+        <div class="pickbox" id="chebPick">A fica fixo e B acompanha o mouse.</div>
+      </article>
+    </div>
 
-        // Função utilitária para pegar a posição do mouse/toque no canvas
-        function getPointerPos(canvas, evt) {
-            const rect = canvas.getBoundingClientRect();
-            const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
-            const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
-            
-            let x = Math.floor((clientX - rect.left) / (rect.width / GRID_SIZE));
-            let y = Math.floor((clientY - rect.top) / (rect.height / GRID_SIZE));
-            
-            // Limitar dentro do grid
-            x = Math.max(0, Math.min(x, GRID_SIZE - 1));
-            y = Math.max(0, Math.min(y, GRID_SIZE - 1));
-            return { x, y };
-        }
+    <div class="legend">
+      <span><i class="dot" style="background:#3b82f6"></i>estado atual A</span>
+      <span><i class="dot" style="background:#ef4444"></i>objetivo B</span>
+      <span><i class="dot" style="background:#34d399"></i>seria escolhido</span>
+      <span><i class="dot" style="background:#fbbf24"></i>não seria escolhido agora</span>
+    </div>
 
-        function drawBaseGrid(ctx) {
-            ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-            ctx.strokeStyle = '#334155'; // Slate 700
-            ctx.lineWidth = 1;
+    <div class="note">
+      <strong>Como usar:</strong> em Manhattan, posicione B e clique em <strong>Travar objetivo</strong>. Depois passe o mouse para mover A e ver os valores dos vizinhos. Em Euclidiana e Chebyshev, o modo padrão reproduz a demonstração do seu HTML original.
+    </div>
+  </section>
 
-            for (let i = 0; i <= GRID_SIZE; i++) {
-                // Linhas verticais
-                ctx.beginPath();
-                ctx.moveTo(i * CELL_SIZE, 0);
-                ctx.lineTo(i * CELL_SIZE, CANVAS_SIZE);
-                ctx.stroke();
-                // Linhas horizontais
-                ctx.beginPath();
-                ctx.moveTo(0, i * CELL_SIZE);
-                ctx.lineTo(CANVAS_SIZE, i * CELL_SIZE);
-                ctx.stroke();
-            }
-        }
+  <section id="simulacoes" class="tab">
+    <div class="sim-head">
+      <div>
+        <h2>Simulações lado a lado</h2>
+        <p>Mesmo labirinto: busca aleatória à esquerda e Busca Gulosa + Manhattan à direita.</p>
+      </div>
+      <div class="controls">
+        <button class="action" id="runSim">▶ Executar</button>
+        <button class="action secondary" id="resetSim">↻ Reiniciar</button>
+      </div>
+    </div>
 
-        function drawEntities(ctx, pathCells) {
-            // Desenhar células do caminho
-            pathCells.forEach(cell => {
-                if ((cell.x !== START_POS.x || cell.y !== START_POS.y) && 
-                    (cell.x !== mousePos.x || cell.y !== mousePos.y)) {
-                    ctx.fillStyle = 'rgba(52, 211, 153, 0.4)'; // Emerald com transparência
-                    ctx.fillRect(cell.x * CELL_SIZE, cell.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-                }
-            });
+    <div class="sim-grid">
+      <div class="sim-card">
+        <header>
+          <h3>🎲 Busca aleatória</h3>
+          <div class="stats" id="randomStats">pronta</div>
+        </header>
+        <div class="maze" id="randomMaze"></div>
+      </div>
 
-            // Desenhar Ponto Inicial (Azul)
-            ctx.fillStyle = '#3b82f6'; // Blue 500
-            ctx.fillRect(START_POS.x * CELL_SIZE + 2, START_POS.y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 16px Inter';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('A', START_POS.x * CELL_SIZE + CELL_SIZE/2, START_POS.y * CELL_SIZE + CELL_SIZE/2);
+      <div class="sim-card">
+        <header>
+          <h3>🧭 Busca Gulosa + Manhattan</h3>
+          <div class="stats" id="greedyStats">pronta</div>
+        </header>
+        <div class="maze" id="greedyMaze"></div>
+      </div>
+    </div>
 
-            // Desenhar Ponto Final (Vermelho)
-            ctx.fillStyle = '#ef4444'; // Red 500
-            ctx.fillRect(mousePos.x * CELL_SIZE + 2, mousePos.y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
-            ctx.fillStyle = 'white';
-            ctx.fillText('B', mousePos.x * CELL_SIZE + CELL_SIZE/2, mousePos.y * CELL_SIZE + CELL_SIZE/2);
-        }
+    <div class="legend">
+      <span><i class="dot" style="background:#38bdf8"></i>início</span>
+      <span><i class="dot" style="background:#ef4444"></i>objetivo</span>
+      <span><i class="dot" style="background:#315b9d"></i>visitado</span>
+      <span><i class="dot" style="background:#facc15"></i>fronteira</span>
+      <span><i class="dot" style="background:#fb923c"></i>atual</span>
+      <span><i class="dot" style="background:#34d399"></i>caminho final</span>
+    </div>
+  </section>
+</div>
 
-        function renderManhattan() {
-            const canvas = document.getElementById('canvas-manhattan');
-            const ctx = canvas.getContext('2d');
-            const dx = Math.abs(mousePos.x - START_POS.x);
-            const dy = Math.abs(mousePos.y - START_POS.y);
-            const distance = dx + dy;
-            
-            document.getElementById('dist-manhattan').innerText = distance;
+<script>
+/* ---------------- Tabs ---------------- */
+document.querySelectorAll(".tab-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(btn.dataset.tab).classList.add("active");
+  });
+});
 
-            drawBaseGrid(ctx);
-            
-            // Gerar o caminho visual (Zigue-Zague ou 'L')
-            let path = [];
-            let cx = START_POS.x;
-            let cy = START_POS.y;
-            
-            // Move no eixo X primeiro, depois no eixo Y
-            while(cx !== mousePos.x) {
-                path.push({x: cx, y: cy});
-                cx += Math.sign(mousePos.x - cx);
-            }
-            while(cy !== mousePos.y) {
-                path.push({x: cx, y: cy});
-                cy += Math.sign(mousePos.y - cy);
-            }
-            
-            drawEntities(ctx, path);
-            
-            // Desenhar uma linha pontilhada acompanhando o caminho para ênfase
-            ctx.beginPath();
-            ctx.strokeStyle = '#34d399'; // Emerald 400
-            ctx.lineWidth = 3;
-            ctx.setLineDash([5, 5]);
-            ctx.moveTo(START_POS.x * CELL_SIZE + CELL_SIZE/2, START_POS.y * CELL_SIZE + CELL_SIZE/2);
-            ctx.lineTo(mousePos.x * CELL_SIZE + CELL_SIZE/2, START_POS.y * CELL_SIZE + CELL_SIZE/2);
-            ctx.lineTo(mousePos.x * CELL_SIZE + CELL_SIZE/2, mousePos.y * CELL_SIZE + CELL_SIZE/2);
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
+/* ---------------- Heurísticas ---------------- */
+const GRID=10;
+const SIZE=300;
+const CELL=SIZE/GRID;
 
-        function renderEuclidean() {
-            const canvas = document.getElementById('canvas-euclidean');
-            const ctx = canvas.getContext('2d');
-            const dx = mousePos.x - START_POS.x;
-            const dy = mousePos.y - START_POS.y;
-            const distance = Math.sqrt(dx*dx + dy*dy);
-            
-            document.getElementById('dist-euclidean').innerText = distance.toFixed(2);
+let goal={x:7,y:2};
+let current={x:2,y:5};
+let locked=false;
 
-            drawBaseGrid(ctx);
-            drawEntities(ctx, []); // Nenhum grid path para euclidiana (voo livre)
+const originalStart={x:2,y:5};
+let eucOriginal=true;
+let chebOriginal=true;
+let eucGoal={x:7,y:2};
+let chebGoal={x:7,y:2};
 
-            // Desenhar a linha reta
-            ctx.beginPath();
-            ctx.strokeStyle = '#c084fc'; // Purple 400
-            ctx.lineWidth = 4;
-            ctx.moveTo(START_POS.x * CELL_SIZE + CELL_SIZE/2, START_POS.y * CELL_SIZE + CELL_SIZE/2);
-            ctx.lineTo(mousePos.x * CELL_SIZE + CELL_SIZE/2, mousePos.y * CELL_SIZE + CELL_SIZE/2);
-            ctx.stroke();
-        }
+const canvases={
+  man:document.getElementById("manCanvas"),
+  euc:document.getElementById("eucCanvas"),
+  cheb:document.getElementById("chebCanvas")
+};
 
-        function renderChebyshev() {
-            const canvas = document.getElementById('canvas-chebyshev');
-            const ctx = canvas.getContext('2d');
-            const dx = Math.abs(mousePos.x - START_POS.x);
-            const dy = Math.abs(mousePos.y - START_POS.y);
-            const distance = Math.max(dx, dy);
-            
-            document.getElementById('dist-chebyshev').innerText = distance;
+function clamp(v){
+  return Math.max(0,Math.min(GRID-1,v));
+}
 
-            drawBaseGrid(ctx);
+function posFromEvent(canvas,e){
+  const r=canvas.getBoundingClientRect();
+  const p=e.touches?e.touches[0]:e;
+  return{
+    x:clamp(Math.floor((p.clientX-r.left)/(r.width/GRID))),
+    y:clamp(Math.floor((p.clientY-r.top)/(r.height/GRID)))
+  };
+}
 
-            // Gerar o caminho visual (Diagonal primeiro, depois reta)
-            let path = [];
-            let cx = START_POS.x;
-            let cy = START_POS.y;
-            
-            while(cx !== mousePos.x || cy !== mousePos.y) {
-                path.push({x: cx, y: cy});
-                if (cx !== mousePos.x) cx += Math.sign(mousePos.x - cx);
-                if (cy !== mousePos.y) cy += Math.sign(mousePos.y - cy);
-            }
-            
-            drawEntities(ctx, path);
+function manhattanTo(p,target){
+  return Math.abs(p.x-target.x)+Math.abs(p.y-target.y);
+}
+function euclideanTo(p,target){
+  const dx=p.x-target.x;
+  const dy=p.y-target.y;
+  return Math.sqrt(dx*dx+dy*dy);
+}
+function chebyshevTo(p,target){
+  return Math.max(Math.abs(p.x-target.x),Math.abs(p.y-target.y));
+}
 
-            // Desenhar uma linha contínua acompanhando as diagonais
-            ctx.beginPath();
-            ctx.strokeStyle = '#fbbf24'; // Amber 400
-            ctx.lineWidth = 3;
-            
-            let lx = START_POS.x;
-            let ly = START_POS.y;
-            ctx.moveTo(lx * CELL_SIZE + CELL_SIZE/2, ly * CELL_SIZE + CELL_SIZE/2);
-            
-            while(lx !== mousePos.x || ly !== mousePos.y) {
-                if (lx !== mousePos.x) lx += Math.sign(mousePos.x - lx);
-                if (ly !== mousePos.y) ly += Math.sign(mousePos.y - ly);
-                ctx.lineTo(lx * CELL_SIZE + CELL_SIZE/2, ly * CELL_SIZE + CELL_SIZE/2);
-            }
-            ctx.stroke();
-        }
+function neighbors(p){
+  return[
+    {name:"cima",x:p.x,y:p.y-1},
+    {name:"baixo",x:p.x,y:p.y+1},
+    {name:"esquerda",x:p.x-1,y:p.y},
+    {name:"direita",x:p.x+1,y:p.y}
+  ].filter(n=>n.x>=0&&n.x<GRID&&n.y>=0&&n.y<GRID);
+}
 
-        function updateAll(evt) {
-            // Usa o primeiro canvas apenas como referência para pegar posição,
-            // mas sincroniza todos para mostrar a mesma distância.
-            if(evt) {
-                const targetCanvas = evt.target;
-                const newPos = getPointerPos(targetCanvas, evt);
-                if(newPos.x !== mousePos.x || newPos.y !== mousePos.y) {
-                    mousePos = newPos;
-                }
-            }
-            
-            renderManhattan();
-            renderEuclidean();
-            renderChebyshev();
-        }
+function drawGrid(ctx){
+  ctx.clearRect(0,0,SIZE,SIZE);
+  ctx.fillStyle="#111827";
+  ctx.fillRect(0,0,SIZE,SIZE);
+  ctx.strokeStyle="#334155";
+  ctx.lineWidth=1;
 
-        const canvases = ['canvas-manhattan', 'canvas-euclidean', 'canvas-chebyshev'];
-        canvases.forEach(id => {
-            const cvs = document.getElementById(id);
-            cvs.addEventListener('mousemove', updateAll);
-            cvs.addEventListener('touchmove', (e) => {
-                e.preventDefault(); // Impede rolagem ao arrastar no canvas
-                updateAll(e);
-            });
-            cvs.addEventListener('mousedown', updateAll);
-            cvs.addEventListener('touchstart', updateAll);
-        });
+  for(let i=0;i<=GRID;i++){
+    ctx.beginPath();
+    ctx.moveTo(i*CELL,0);
+    ctx.lineTo(i*CELL,SIZE);
+    ctx.stroke();
 
-        // Render inicial
-        updateAll();
+    ctx.beginPath();
+    ctx.moveTo(0,i*CELL);
+    ctx.lineTo(SIZE,i*CELL);
+    ctx.stroke();
+  }
+}
 
-    </script>
+function drawCell(ctx,p,color,label){
+  ctx.fillStyle=color;
+  ctx.fillRect(p.x*CELL+3,p.y*CELL+3,CELL-6,CELL-6);
+
+  if(label){
+    ctx.fillStyle="#fff";
+    ctx.font="800 14px system-ui";
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+    ctx.fillText(label,p.x*CELL+CELL/2,p.y*CELL+CELL/2);
+  }
+}
+
+function drawOriginalManhattan(ctx,start,target){
+  ctx.strokeStyle="#34d399";
+  ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.moveTo(start.x*CELL+CELL/2,start.y*CELL+CELL/2);
+  ctx.lineTo(target.x*CELL+CELL/2,start.y*CELL+CELL/2);
+  ctx.lineTo(target.x*CELL+CELL/2,target.y*CELL+CELL/2);
+  ctx.stroke();
+}
+
+function drawOriginalEuclidean(ctx,start,target){
+  ctx.strokeStyle="#c084fc";
+  ctx.lineWidth=4;
+  ctx.beginPath();
+  ctx.moveTo(start.x*CELL+CELL/2,start.y*CELL+CELL/2);
+  ctx.lineTo(target.x*CELL+CELL/2,target.y*CELL+CELL/2);
+  ctx.stroke();
+}
+
+function drawOriginalChebyshev(ctx,start,target){
+  ctx.strokeStyle="#fbbf24";
+  ctx.lineWidth=3;
+
+  let x=start.x;
+  let y=start.y;
+
+  ctx.beginPath();
+  ctx.moveTo(x*CELL+CELL/2,y*CELL+CELL/2);
+
+  while(x!==target.x||y!==target.y){
+    if(x!==target.x)x+=Math.sign(target.x-x);
+    if(y!==target.y)y+=Math.sign(target.y-y);
+    ctx.lineTo(x*CELL+CELL/2,y*CELL+CELL/2);
+  }
+
+  ctx.stroke();
+}
+
+function renderDecisionCard(type,canvas,fn,valueId,pickId){
+  const ctx=canvas.getContext("2d");
+  drawGrid(ctx);
+
+  const options=neighbors(current).map(o=>({
+    ...o,
+    value:fn(o,goal)
+  }));
+
+  const min=Math.min(...options.map(o=>o.value));
+
+  options.forEach(o=>{
+    const chosen=Math.abs(o.value-min)<1e-9;
+    drawCell(ctx,o,chosen?"#34d399":"#fbbf24",chosen?"✓":"");
+
+    ctx.fillStyle="#07111f";
+    ctx.font="800 10px system-ui";
+    ctx.textAlign="center";
+    ctx.textBaseline="alphabetic";
+    ctx.fillText(
+      type==="euc"?o.value.toFixed(2):String(o.value),
+      o.x*CELL+CELL/2,
+      o.y*CELL+CELL-5
+    );
+  });
+
+  drawCell(ctx,current,"#3b82f6","A");
+  drawCell(ctx,goal,"#ef4444","B");
+
+  const currentValue=fn(current,goal);
+  document.getElementById(valueId).textContent=
+    type==="euc"?currentValue.toFixed(2):currentValue;
+
+  const chosen=options
+    .filter(o=>Math.abs(o.value-min)<1e-9)
+    .map(o=>o.name)
+    .join(" / ");
+
+  const others=options
+    .filter(o=>Math.abs(o.value-min)>=1e-9)
+    .map(o=>`${o.name} (${type==="euc"?o.value.toFixed(2):o.value})`)
+    .join(", ");
+
+  document.getElementById(pickId).innerHTML=
+    `<strong>Escolhido:</strong> ${chosen} — menor h(n) = ${type==="euc"?min.toFixed(2):min}<br>`+
+    `<strong>Não agora:</strong> ${others||"nenhum"}`;
+}
+
+function renderOriginalEuclidean(){
+  const ctx=canvases.euc.getContext("2d");
+  drawGrid(ctx);
+  drawOriginalEuclidean(ctx,originalStart,eucGoal);
+  drawCell(ctx,originalStart,"#3b82f6","A");
+  drawCell(ctx,eucGoal,"#ef4444","B");
+
+  document.getElementById("eucValue").textContent=
+    euclideanTo(originalStart,eucGoal).toFixed(2);
+
+  document.getElementById("eucPick").innerHTML=
+    "<strong>Visual original:</strong> A fica fixo e B acompanha o mouse, mostrando a distância em linha reta.";
+}
+
+function renderOriginalChebyshev(){
+  const ctx=canvases.cheb.getContext("2d");
+  drawGrid(ctx);
+  drawOriginalChebyshev(ctx,originalStart,chebGoal);
+  drawCell(ctx,originalStart,"#3b82f6","A");
+  drawCell(ctx,chebGoal,"#ef4444","B");
+
+  document.getElementById("chebValue").textContent=
+    chebyshevTo(originalStart,chebGoal);
+
+  document.getElementById("chebPick").innerHTML=
+    "<strong>Visual original:</strong> A fica fixo e B acompanha o mouse, destacando o avanço diagonal.";
+}
+
+function renderManhattan(){
+  const ctx=canvases.man.getContext("2d");
+  drawGrid(ctx);
+
+  if(!locked){
+    drawOriginalManhattan(ctx,current,goal);
+    drawCell(ctx,current,"#3b82f6","A");
+    drawCell(ctx,goal,"#ef4444","B");
+
+    document.getElementById("manValue").textContent=
+      manhattanTo(current,goal);
+
+    document.getElementById("manPick").innerHTML=
+      "Trave o objetivo para comparar os vizinhos.";
+  }else{
+    renderDecisionCard(
+      "man",
+      canvases.man,
+      manhattanTo,
+      "manValue",
+      "manPick"
+    );
+  }
+}
+
+function renderAll(){
+  renderManhattan();
+
+  if(eucOriginal){
+    renderOriginalEuclidean();
+  }else{
+    renderDecisionCard(
+      "euc",
+      canvases.euc,
+      euclideanTo,
+      "eucValue",
+      "eucPick"
+    );
+  }
+
+  if(chebOriginal){
+    renderOriginalChebyshev();
+  }else{
+    renderDecisionCard(
+      "cheb",
+      canvases.cheb,
+      chebyshevTo,
+      "chebValue",
+      "chebPick"
+    );
+  }
+
+  document.getElementById("goalLabel").textContent=
+    `(${goal.x}, ${goal.y})`;
+
+  document.getElementById("modeLabel").textContent=
+    locked
+      ?"objetivo travado · passe o mouse em Manhattan para mover A"
+      :"mova o mouse no quadro de Manhattan para posicionar B";
+
+  document.getElementById("lockBtn").textContent=
+    locked?"🔓 Destravar objetivo":"🔒 Travar objetivo";
+
+  const eucBtn=document.getElementById("eucModeBtn");
+  eucBtn.classList.toggle("active",eucOriginal);
+  eucBtn.textContent=
+    eucOriginal?"✓ Visual original":"↔ Voltar ao visual original";
+
+  const chebBtn=document.getElementById("chebModeBtn");
+  chebBtn.classList.toggle("active",chebOriginal);
+  chebBtn.textContent=
+    chebOriginal?"✓ Visual original":"↔ Voltar ao visual original";
+}
+
+/* Manhattan: antes de travar move B; depois de travar move A */
+["mousemove","mousedown","touchmove","touchstart"].forEach(evt=>{
+  canvases.man.addEventListener(evt,e=>{
+    if(e.cancelable)e.preventDefault();
+    const p=posFromEvent(canvases.man,e);
+
+    if(locked){
+      current=p;
+    }else{
+      goal=p;
+    }
+
+    renderAll();
+  });
+});
+
+/* Euclidiana: no modo original, B acompanha o mouse */
+["mousemove","mousedown","touchmove","touchstart"].forEach(evt=>{
+  canvases.euc.addEventListener(evt,e=>{
+    if(e.cancelable)e.preventDefault();
+    const p=posFromEvent(canvases.euc,e);
+
+    if(eucOriginal){
+      eucGoal=p;
+    }else{
+      if(locked) current=p;
+      else goal=p;
+    }
+
+    renderAll();
+  });
+});
+
+/* Chebyshev: no modo original, B acompanha o mouse */
+["mousemove","mousedown","touchmove","touchstart"].forEach(evt=>{
+  canvases.cheb.addEventListener(evt,e=>{
+    if(e.cancelable)e.preventDefault();
+    const p=posFromEvent(canvases.cheb,e);
+
+    if(chebOriginal){
+      chebGoal=p;
+    }else{
+      if(locked) current=p;
+      else goal=p;
+    }
+
+    renderAll();
+  });
+});
+
+document.getElementById("lockBtn").addEventListener("click",()=>{
+  locked=!locked;
+  renderAll();
+});
+
+document.getElementById("eucModeBtn").addEventListener("click",()=>{
+  eucOriginal=!eucOriginal;
+  renderAll();
+});
+
+document.getElementById("chebModeBtn").addEventListener("click",()=>{
+  chebOriginal=!chebOriginal;
+  renderAll();
+});
+
+document.getElementById("resetBtn").addEventListener("click",()=>{
+  goal={x:7,y:2};
+  current={x:2,y:5};
+  eucGoal={x:7,y:2};
+  chebGoal={x:7,y:2};
+  locked=false;
+  eucOriginal=true;
+  chebOriginal=true;
+  renderAll();
+});
+
+renderAll();
+
+/* ---------------- Simulações ---------------- */
+const MAP=[
+  "WWWWWWWWWWWWWWWWWWWW",
+  "W                  W",
+  "W         WWWWWW   W",
+  "W   WWWW       W   W",
+  "W   W        WWWW  W",
+  "W WWW  WWWW        W",
+  "W   W     W W      W",
+  "W   W     W   WWW WW",
+  "W   WWW WWW   W W  W",
+  "W     W   W   W W  W",
+  "WWW   W   WWWWW W  W",
+  "W W      WW        W",
+  "W W   WWWW   WWW   W",
+  "W     W    E   W   W",
+  "WWWWWWWWWWWWWWWWWWWW"
+];
+
+const H=MAP.length;
+const W=MAP[0].length;
+const START={x:2,y:2};
+
+let END=null;
+for(let y=0;y<H;y++){
+  for(let x=0;x<W;x++){
+    if(MAP[y][x]==="E"){
+      END={x,y};
+    }
+  }
+}
+
+function key(p){
+  return `${p.x},${p.y}`;
+}
+
+function mazeHeuristic(p){
+  return Math.abs(p.x-END.x)+Math.abs(p.y-END.y);
+}
+
+function mazeNeighbors(p){
+  return[
+    [p.x,p.y-1],
+    [p.x,p.y+1],
+    [p.x-1,p.y],
+    [p.x+1,p.y]
+  ]
+  .filter(([x,y])=>{
+    return x>=0&&x<W&&y>=0&&y<H&&MAP[y][x]!=="W";
+  })
+  .map(([x,y])=>({x,y}));
+}
+
+function buildMaze(id){
+  const el=document.getElementById(id);
+  el.innerHTML="";
+
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      const d=document.createElement("div");
+      d.className="cell"+(MAP[y][x]==="W"?" wall":"");
+      d.dataset.k=`${x},${y}`;
+      el.appendChild(d);
+    }
+  }
+}
+
+function reconstruct(parent){
+  const out=[];
+  let cur=key(END);
+
+  while(cur){
+    out.push(cur);
+    cur=parent[cur];
+  }
+
+  return new Set(out);
+}
+
+function simulate(mode){
+  const queue=[START];
+  const frontier=new Set([key(START)]);
+  const visited=new Set();
+  const parent={[key(START)]:null};
+  const frames=[];
+
+  while(queue.length){
+    let idx=0;
+
+    if(mode==="random"){
+      idx=Math.floor(Math.random()*queue.length);
+    }else{
+      idx=queue.reduce((best,p,i,arr)=>{
+        return mazeHeuristic(p)<mazeHeuristic(arr[best])?i:best;
+      },0);
+    }
+
+    const cur=queue.splice(idx,1)[0];
+    frontier.delete(key(cur));
+
+    if(visited.has(key(cur))){
+      continue;
+    }
+
+    visited.add(key(cur));
+
+    if(key(cur)===key(END)){
+      frames.push({
+        visited:new Set(visited),
+        frontier:new Set(frontier),
+        current:null,
+        path:reconstruct(parent)
+      });
+      break;
+    }
+
+    for(const n of mazeNeighbors(cur)){
+      const nk=key(n);
+
+      if(visited.has(nk)||frontier.has(nk)){
+        continue;
+      }
+
+      parent[nk]=key(cur);
+      frontier.add(nk);
+      queue.push(n);
+    }
+
+    frames.push({
+      visited:new Set(visited),
+      frontier:new Set(frontier),
+      current:cur,
+      path:new Set()
+    });
+  }
+
+  return frames;
+}
+
+function paintMaze(id,state){
+  const el=document.getElementById(id);
+
+  [...el.children].forEach((d,i)=>{
+    const y=Math.floor(i/W);
+    const x=i%W;
+    d.className="cell"+(MAP[y][x]==="W"?" wall":"");
+  });
+
+  function mark(set,cls){
+    set.forEach(v=>{
+      const d=el.querySelector(`[data-k="${v}"]`);
+
+      if(d&&!d.classList.contains("wall")){
+        d.classList.add(cls);
+      }
+    });
+  }
+
+  mark(state.visited,"visited");
+  mark(state.frontier,"frontier");
+  mark(state.path,"path");
+
+  if(state.current){
+    const d=el.querySelector(`[data-k="${key(state.current)}"]`);
+    if(d)d.classList.add("current");
+  }
+
+  const startEl=el.querySelector(`[data-k="${key(START)}"]`);
+  const goalEl=el.querySelector(`[data-k="${key(END)}"]`);
+
+  if(startEl)startEl.classList.add("start");
+  if(goalEl)goalEl.classList.add("goal");
+}
+
+let timers=[];
+
+function resetSim(){
+  timers.forEach(clearInterval);
+  timers=[];
+
+  buildMaze("randomMaze");
+  buildMaze("greedyMaze");
+
+  const empty={
+    visited:new Set(),
+    frontier:new Set(),
+    path:new Set(),
+    current:null
+  };
+
+  paintMaze("randomMaze",empty);
+  paintMaze("greedyMaze",empty);
+
+  document.getElementById("randomStats").textContent="pronta";
+  document.getElementById("greedyStats").textContent="pronta";
+}
+
+function animate(id,statsId,frames){
+  let i=0;
+
+  const timer=setInterval(()=>{
+    const frame=frames[Math.min(i,frames.length-1)];
+
+    paintMaze(id,frame);
+
+    const pathLength=
+      frame.path.size?frame.path.size-1:"—";
+
+    document.getElementById(statsId).textContent=
+      `visitados: ${frame.visited.size} · caminho: ${pathLength}`;
+
+    i++;
+
+    if(i>=frames.length){
+      clearInterval(timer);
+    }
+  },80);
+
+  timers.push(timer);
+}
+
+document.getElementById("runSim").addEventListener("click",()=>{
+  resetSim();
+
+  animate(
+    "randomMaze",
+    "randomStats",
+    simulate("random")
+  );
+
+  animate(
+    "greedyMaze",
+    "greedyStats",
+    simulate("greedy")
+  );
+});
+
+document.getElementById("resetSim").addEventListener("click",resetSim);
+
+resetSim();
+</script>
 </body>
 </html>
