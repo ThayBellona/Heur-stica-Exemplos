@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -228,7 +229,8 @@ canvas.heur{
         <p>Movimento horizontal e vertical. É a heurística usada no seu labirinto em Python.</p>
         <canvas id="manCanvas" class="heur" width="300" height="300"></canvas>
         <div class="formula man">h = |Δx| + |Δy| → <span id="manValue">0</span></div>
-        <div class="pickbox" id="manPick">Trave o objetivo para comparar os vizinhos.</div>
+        <button class="card-mode active" id="manModeBtn">✓ Visual original</button>
+        <div class="pickbox" id="manPick">A fica fixo e B acompanha o mouse, como no HTML original.</div>
       </article>
 
       <article class="card">
@@ -258,7 +260,7 @@ canvas.heur{
     </div>
 
     <div class="note">
-      <strong>Como usar:</strong> em Manhattan, posicione B e clique em <strong>Travar objetivo</strong>. Depois passe o mouse para mover A e ver os valores dos vizinhos. Em Euclidiana e Chebyshev, o modo padrão reproduz a demonstração do seu HTML original.
+      <strong>Como usar:</strong> os três exemplos começam no <strong>Visual original</strong>, com A fixo e B acompanhando o mouse. Em Manhattan, desligue o modo original, posicione B e clique em <strong>Travar objetivo</strong> para mostrar quais vizinhos seriam priorizados.
     </div>
   </section>
 
@@ -324,8 +326,10 @@ let current={x:2,y:5};
 let locked=false;
 
 const originalStart={x:2,y:5};
+let manOriginal=true;
 let eucOriginal=true;
 let chebOriginal=true;
+let manGoal={x:7,y:2};
 let eucGoal={x:7,y:2};
 let chebGoal={x:7,y:2};
 
@@ -488,6 +492,18 @@ function renderDecisionCard(type,canvas,fn,valueId,pickId){
     `<strong>Não agora:</strong> ${others||"nenhum"}`;
 }
 
+function renderOriginalManhattan(){
+  const ctx=canvases.man.getContext("2d");
+  drawGrid(ctx);
+  drawOriginalManhattan(ctx,originalStart,manGoal);
+  drawCell(ctx,originalStart,"#3b82f6","A");
+  drawCell(ctx,manGoal,"#ef4444","B");
+  document.getElementById("manValue").textContent=
+    manhattanTo(originalStart,manGoal);
+  document.getElementById("manPick").innerHTML=
+    "<strong>Visual original:</strong> A fica fixo e B acompanha o mouse, mostrando o caminho horizontal + vertical.";
+}
+
 function renderOriginalEuclidean(){
   const ctx=canvases.euc.getContext("2d");
   drawGrid(ctx);
@@ -517,19 +533,8 @@ function renderOriginalChebyshev(){
 }
 
 function renderManhattan(){
-  const ctx=canvases.man.getContext("2d");
-  drawGrid(ctx);
-
-  if(!locked){
-    drawOriginalManhattan(ctx,current,goal);
-    drawCell(ctx,current,"#3b82f6","A");
-    drawCell(ctx,goal,"#ef4444","B");
-
-    document.getElementById("manValue").textContent=
-      manhattanTo(current,goal);
-
-    document.getElementById("manPick").innerHTML=
-      "Trave o objetivo para comparar os vizinhos.";
+  if(manOriginal){
+    renderOriginalManhattan();
   }else{
     renderDecisionCard(
       "man",
@@ -569,15 +574,22 @@ function renderAll(){
   }
 
   document.getElementById("goalLabel").textContent=
-    `(${goal.x}, ${goal.y})`;
+    manOriginal ? `(${manGoal.x}, ${manGoal.y})` : `(${goal.x}, ${goal.y})`;
 
   document.getElementById("modeLabel").textContent=
-    locked
-      ?"objetivo travado · passe o mouse em Manhattan para mover A"
-      :"mova o mouse no quadro de Manhattan para posicionar B";
+    manOriginal
+      ?"visual original · A fixo e B acompanha o mouse"
+      :(locked
+        ?"objetivo travado · passe o mouse em Manhattan para mover A"
+        :"mova o mouse no quadro de Manhattan para posicionar B");
 
   document.getElementById("lockBtn").textContent=
     locked?"🔓 Destravar objetivo":"🔒 Travar objetivo";
+
+  const manBtn=document.getElementById("manModeBtn");
+  manBtn.classList.toggle("active",manOriginal);
+  manBtn.textContent=
+    manOriginal?"✓ Visual original":"↔ Voltar ao visual original";
 
   const eucBtn=document.getElementById("eucModeBtn");
   eucBtn.classList.toggle("active",eucOriginal);
@@ -590,16 +602,17 @@ function renderAll(){
     chebOriginal?"✓ Visual original":"↔ Voltar ao visual original";
 }
 
-/* Manhattan: antes de travar move B; depois de travar move A */
+/* Manhattan: no modo original, B acompanha o mouse */
 ["mousemove","mousedown","touchmove","touchstart"].forEach(evt=>{
   canvases.man.addEventListener(evt,e=>{
     if(e.cancelable)e.preventDefault();
     const p=posFromEvent(canvases.man,e);
 
-    if(locked){
-      current=p;
+    if(manOriginal){
+      manGoal=p;
     }else{
-      goal=p;
+      if(locked) current=p;
+      else goal=p;
     }
 
     renderAll();
@@ -645,6 +658,11 @@ document.getElementById("lockBtn").addEventListener("click",()=>{
   renderAll();
 });
 
+document.getElementById("manModeBtn").addEventListener("click",()=>{
+  manOriginal=!manOriginal;
+  renderAll();
+});
+
 document.getElementById("eucModeBtn").addEventListener("click",()=>{
   eucOriginal=!eucOriginal;
   renderAll();
@@ -658,9 +676,11 @@ document.getElementById("chebModeBtn").addEventListener("click",()=>{
 document.getElementById("resetBtn").addEventListener("click",()=>{
   goal={x:7,y:2};
   current={x:2,y:5};
+  manGoal={x:7,y:2};
   eucGoal={x:7,y:2};
   chebGoal={x:7,y:2};
   locked=false;
+  manOriginal=true;
   eucOriginal=true;
   chebOriginal=true;
   renderAll();
